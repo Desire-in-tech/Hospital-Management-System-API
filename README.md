@@ -1,219 +1,327 @@
 # Hospital Management System API
 
-A production-style REST API for managing hospital operations — built with FastAPI, PostgreSQL, SQLAlchemy, Alembic, and JWT authentication.
+## 1. Project Title
+
+**Hospital Management System API**  
+A backend-only REST API for managing core hospital operations, including authentication, patient workflows, appointments, medical records, and prescriptions.
 
 ---
 
-## Tech Stack
+## 2. Overview
 
-- **FastAPI** — high-performance web framework
-- **PostgreSQL** — relational database
-- **SQLAlchemy** — ORM
-- **Alembic** — database migrations
-- **JWT** — authentication via `python-jose`
-- **bcrypt** — password hashing via `passlib`
-- **Faker** — seed data generation
-- **Docker + Docker Compose** — containerization
+The **Hospital Management System API** is a production-style backend service built to support day-to-day hospital operations through a secure and structured REST API.
+
+It is designed for key hospital roles such as:
+- **Administrators** managing departments, doctors, and overall system access
+- **Doctors** reviewing patient data, managing appointments, and creating medical records
+- **Patients** accessing their own information and booking appointments
+
+This project is **backend-only** and exposes API endpoints for authentication, operational workflows, and clinical record management. It is well-suited for portfolio use as a SaaS-style backend focused on clean architecture, role-based authorization, and realistic healthcare domain modeling.
 
 ---
 
-## Quickstart (Docker)
+## 3. Features
+
+- **JWT Authentication** for secure login and protected API access
+- **Role-Based Access Control** for **Admin**, **Doctor**, and **Patient** users
+- **Patient Management** with role-aware access to profile data
+- **Doctor Management** with department assignment support
+- **Appointment System** for scheduling and status updates
+- **Medical Records** for storing diagnosis and consultation notes
+- **Prescriptions** linked to medical records
+- **Seed Data Generation** using Faker for realistic development and demo data
+- **Docker Support** for containerized local development and deployment
+
+---
+
+## 4. Tech Stack
+
+- **FastAPI** - high-performance Python web framework for building REST APIs
+- **PostgreSQL** - primary relational database
+- **SQLAlchemy** - ORM for database modeling and persistence
+- **Alembic** - database schema migrations
+- **JWT Authentication** - token-based authentication and authorization
+- **Pydantic / Pydantic Settings** - request validation and configuration management
+- **Docker & Docker Compose** - containerized development environment
+- **Faker** - realistic seed data generation
+- **PyJWT** - JWT token encoding and decoding
+- **bcrypt** - password hashing
+
+---
+
+## 5. System Architecture
+
+The application follows a clean layered backend structure:
+
+- **FastAPI Layer**  
+  Handles HTTP requests, routing, request validation, response serialization, and OpenAPI documentation.
+
+- **Service Layer**  
+  Contains the core business logic for authentication, patients, doctors, departments, appointments, records, and prescriptions.
+
+- **Database Layer**  
+  Uses PostgreSQL as the primary persistent data store for operational and clinical data.
+
+- **ORM Layer (SQLAlchemy)**  
+  Maps Python models to relational database tables and manages relationships between domain entities.
+
+- **Migration Layer (Alembic)**  
+  Tracks and applies schema changes consistently across development and deployment environments.
+
+This structure keeps routing, business logic, and persistence concerns separated, making the project easier to maintain and extend.
+
+---
+
+## 6. Database Schema
+
+The API is built around the following core entities:
+
+- **Users**  
+  Stores authentication and authorization data such as name, email, password hash, and role (`admin`, `doctor`, `patient`).
+
+- **Patients**  
+  Stores patient profile information including demographic and contact details.
+
+- **Doctors**  
+  Stores doctor profile data including specialization, email, phone, and department assignment.
+
+- **Departments**  
+  Represents hospital departments such as Cardiology, Neurology, and Pediatrics.
+
+- **Appointments**  
+  Connects patients and doctors for scheduled consultations and tracks appointment status.
+
+- **Medical Records**  
+  Stores diagnosis and consultation notes for a patient, created by a doctor.
+
+- **Prescriptions**  
+  Stores medication details linked to a medical record.
+
+### Relationships
+
+- One **Department** can have many **Doctors**
+- One **Patient** can have many **Appointments**
+- One **Doctor** can have many **Appointments**
+- One **Patient** can have many **Medical Records**
+- One **Doctor** can create many **Medical Records**
+- One **Medical Record** can have many **Prescriptions**
+
+### Important Modeling Note
+
+In this codebase, **authentication users** and **domain profiles** are stored separately:
+- `users` handles login credentials and role information
+- `patients` and `doctors` store business/domain data
+
+Doctor and patient access is associated in the application layer by matching the authenticated user's email with the corresponding doctor or patient profile.
+
+---
+
+## 7. Setup Instructions
+
+### Clone repo
 
 ```bash
-# 1. Clone the repo and enter the folder
-cd "Hospital Management System API"
-
-# 2. Copy the env file
-cp .env.example .env
-# Edit .env and set a strong SECRET_KEY
-
-# 3. Start everything
-docker compose up --build
-
-# 4. API is available at:
-#    http://localhost:8000
-#    http://localhost:8000/docs  (Swagger UI)
+git clone <your-repository-url>
+cd Hospital-Management-System-API
 ```
 
----
-
-## Seed the Database
+### Create virtual environment
 
 ```bash
-# In a second terminal, after docker compose up:
-docker compose exec api python -m scripts.seed
+python -m venv .venv
+source .venv/Scripts/activate
 ```
 
-Default credentials after seeding:
-| Role    | Email                     | Password      |
-|---------|---------------------------|---------------|
-| Admin   | admin@hospital.com        | Admin@1234    |
-| Doctor  | (any seeded doctor email) | Doctor@1234   |
-| Patient | (any seeded patient email)| Patient@1234  |
+> On macOS/Linux, use `source .venv/bin/activate` instead.
 
----
-
-## Run Migrations
-
-Migrations run automatically on `docker compose up`.  
-To run manually:
+### Install dependencies
 
 ```bash
-docker compose exec api alembic upgrade head
-```
-
-To generate a new migration after model changes:
-
-```bash
-docker compose exec api alembic revision --autogenerate -m "describe your change"
-docker compose exec api alembic upgrade head
-```
-
----
-
-## API Endpoints
-
-### Authentication
-| Method | Path            | Description       |
-|--------|-----------------|-------------------|
-| POST   | /auth/register  | Register new user |
-| POST   | /auth/login     | Login (returns JWT)|
-
-### Departments (Admin: full CRUD, Others: read-only)
-| Method | Path                    |
-|--------|-------------------------|
-| GET    | /departments/           |
-| GET    | /departments/{id}       |
-| POST   | /departments/           |
-| PUT    | /departments/{id}       |
-| DELETE | /departments/{id}       |
-
-### Doctors (Admin: full CRUD, Others: read-only)
-| Method | Path               |
-|--------|--------------------|
-| GET    | /doctors/          |
-| GET    | /doctors/{id}      |
-| POST   | /doctors/          |
-| PUT    | /doctors/{id}      |
-| DELETE | /doctors/{id}      |
-
-### Patients (Admin: full CRUD, Patient: own record only)
-| Method | Path                |
-|--------|---------------------|
-| GET    | /patients/          |
-| GET    | /patients/{id}      |
-| POST   | /patients/          |
-| PUT    | /patients/{id}      |
-| DELETE | /patients/{id}      |
-
-### Appointments
-| Method | Path                       | Notes                        |
-|--------|----------------------------|------------------------------|
-| GET    | /appointments/             | Role-filtered                |
-| GET    | /appointments/{id}         |                              |
-| POST   | /appointments/             | Patients book for themselves |
-| POST   | /appointments/admin        | Admin books for any patient  |
-| PUT    | /appointments/{id}         | Doctors/Admin update status  |
-| DELETE | /appointments/{id}         | Admin only                   |
-
-### Medical Records
-| Method | Path              | Notes                     |
-|--------|-------------------|---------------------------|
-| GET    | /records/         | Role-filtered             |
-| GET    | /records/{id}     |                           |
-| POST   | /records/         | Doctors create            |
-| POST   | /records/admin    | Admin creates with doctor |
-| DELETE | /records/{id}     | Admin only                |
-
-### Prescriptions
-| Method | Path                    | Notes           |
-|--------|-------------------------|-----------------|
-| GET    | /prescriptions/         | Filter by record|
-| GET    | /prescriptions/{id}     |                 |
-| POST   | /prescriptions/         | Doctors create  |
-| DELETE | /prescriptions/{id}     | Admin only      |
-
----
-
-## Role-Based Access
-
-| Feature                        | Admin | Doctor | Patient |
-|--------------------------------|-------|--------|---------|
-| Manage departments             | ✅    | ❌     | ❌      |
-| Manage doctors                 | ✅    | ❌     | ❌      |
-| View all patients              | ✅    | ✅     | ❌      |
-| View own patient record        | ✅    | ✅     | ✅      |
-| Book appointments              | ✅    | ❌     | ✅      |
-| Confirm/cancel appointments    | ✅    | ✅     | ❌      |
-| Create medical records         | ✅    | ✅     | ❌      |
-| View own medical records       | ✅    | ✅     | ✅      |
-| Create prescriptions           | ✅    | ✅     | ❌      |
-
----
-
-## Railway Deployment
-
-1. Push this folder to a GitHub repository.
-2. Create a new Railway project → "Deploy from GitHub Repo".
-3. Add a PostgreSQL service in Railway and copy the `DATABASE_URL`.
-4. Set environment variables in Railway:
-   - `DATABASE_URL` — from Railway Postgres
-   - `SECRET_KEY` — a long random string
-   - `ALGORITHM` — `HS256`
-   - `ACCESS_TOKEN_EXPIRE_MINUTES` — `30`
-5. Railway will detect the `Dockerfile` and deploy automatically.
-6. After first deploy, run the seed script via Railway's shell tab.
-
----
-
-## Local Development (without Docker)
-
-```bash
-# Install dependencies
 pip install -r requirements.txt
+```
 
-# Set env vars in .env with a local DATABASE_URL
+### Setup .env file
 
-# Run migrations
+```bash
+cp .env.example .env
+```
+
+Update `.env` with your local configuration:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hospital_db
+SECRET_KEY=change-this-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+### Run migrations (Alembic)
+
+```bash
 alembic upgrade head
+```
 
-# Seed data
+### Seed database
+
+```bash
 python -m scripts.seed
+```
 
-# Start server
+### Start server
+
+```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
+The API will be available at:
+- `http://localhost:8000`
+- `http://localhost:8000/docs`
+
 ---
 
-## Running Tests
+## 8. Environment Variables
 
-Tests use an in-memory SQLite database — no running PostgreSQL or Docker required.
+The project uses the following environment variables:
 
-```bash
-# Install test dependencies
-pip install -r requirements-test.txt
+- `DATABASE_URL` - database connection string for PostgreSQL
+- `SECRET_KEY` - secret used to sign JWT access tokens
+- `ALGORITHM` - JWT signing algorithm, e.g. `HS256`
+- `ACCESS_TOKEN_EXPIRE_MINUTES` - token expiration time in minutes
 
-# Run all tests (from inside the Hospital Management System API folder)
-pytest
+### Example values
 
-# Run with coverage report
-pytest --cov=app --cov-report=term-missing
+For local development:
 
-# Run a specific test file
-pytest tests/test_auth.py
-pytest tests/test_departments.py
-pytest tests/test_patients.py
-pytest tests/test_doctors.py
-pytest tests/test_health.py
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hospital_db
+SECRET_KEY=change-this-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-### Test Coverage
+For Docker Compose networking, the database host is typically `db`:
 
-| File                        | What it tests                                              |
-|-----------------------------|------------------------------------------------------------|
-| `tests/test_health.py`      | Root `/`, `/health`, `/docs`, auth guards on all routes   |
-| `tests/test_auth.py`        | Register, login, token format, duplicate email, OAuth2    |
-| `tests/test_departments.py` | Full CRUD + role-based write access (admin-only)          |
-| `tests/test_doctors.py`     | Full CRUD + role guards, department linking               |
-| `tests/test_patients.py`    | Full CRUD + patients can only see/edit their own record   |
+```env
+DATABASE_URL=postgresql://postgres:postgres@db:5432/hospital_db
+SECRET_KEY=change-this-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+---
+
+## 9. Running with Docker
+
+This project includes a `Dockerfile` and `docker-compose.yml` for containerized development.
+
+### Build containers
+
+```bash
+docker compose build
+```
+
+### Start services
+
+```bash
+docker compose up
+```
+
+The API will be accessible at:
+- `http://localhost:8000`
+- `http://localhost:8000/docs`
+
+### Notes
+
+- The API container runs Alembic migrations automatically on startup
+- The PostgreSQL database is started as a separate service in Docker Compose
+- Ensure your `.env` file uses the Docker database host (`db`) when running in containers
+
+---
+
+## 10. Seeding the Database
+
+The project includes a seed script powered by **Faker** to generate realistic sample data for development, demos, and portfolio presentation.
+
+### Purpose of the seed script
+
+It populates the database with linked records so the API can be explored immediately through Swagger UI or API clients without manual setup.
+
+### Run the seed script locally
+
+```bash
+python -m scripts.seed
+```
+
+### Run the seed script with Docker
+
+```bash
+docker compose exec api python -m scripts.seed
+```
+
+### Seeded data includes
+
+- 1 admin user
+- 10 departments
+- 30 doctors
+- 500 patients
+- 1000 appointments
+- 500 medical records
+- 1000 prescriptions
+
+### Default seeded credentials
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@hospital.com` | `Admin@1234` |
+| Doctor | any seeded doctor email | `Doctor@1234` |
+| Patient | any seeded patient email | `Patient@1234` |
+
+---
+
+## 11. API Endpoints Overview
+
+The API is organized into the following resource groups:
+
+- **Auth**  
+  Registration, login, and token issuance for authenticated access
+
+- **Patients**  
+  Patient profile management and role-aware access to patient data
+
+- **Doctors**  
+  Doctor profile management and department assignment
+
+- **Departments**  
+  Department creation, retrieval, update, and deletion
+
+- **Appointments**  
+  Appointment booking, listing, retrieval, status updates, and admin-managed scheduling
+
+- **Medical Records**  
+  Doctor/admin-created clinical records with role-based visibility
+
+- **Prescriptions**  
+  Prescription creation and retrieval linked to medical records
+
+Interactive API documentation is available via Swagger UI at:
+
+```bash
+http://localhost:8000/docs
+```
+
+---
+
+## 12. Future Improvements
+
+Potential next steps for expanding the platform include:
+
+- **Payment integration** for billing or paid consultation workflows
+- **Notifications system** for appointment and status updates
+- **Advanced analytics dashboard** for operational and clinical insights
+- **Email reminders** for appointments, prescriptions, and follow-up care
+
+---
+
+## 13. Author Section
+
+Built as a portfolio-ready backend project to demonstrate API design, authentication, role-based access control, database modeling, containerized development, and production-style backend architecture with FastAPI.
