@@ -8,6 +8,7 @@ from app.schemas.department import DepartmentOut
 class DoctorCreate(BaseModel):
     name: str
     email: EmailStr
+    password: str
     phone: Optional[str] = None
     specialization: Optional[str] = None
     department_id: Optional[int] = None

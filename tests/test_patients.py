@@ -7,6 +7,7 @@ import pytest
 PATIENT_PAYLOAD = {
     "name": "John Doe",
     "email": "john.doe@test.com",
+    "password": "Patient@1234",
     "dob": "1990-05-15",
     "gender": "male",
     "address": "123 Main St",
@@ -29,18 +30,16 @@ class TestPatientRead:
     def test_patient_role_sees_only_own_record(self, client, admin_headers, patient_headers):
         """A patient user can only see their own profile."""
         client.post("/patients/", json={
-            "name": "Test Patient",
-            "email": "patient@test.com",
-        }, headers=admin_headers)
-        client.post("/patients/", json={
             "name": "Other Patient",
             "email": "other@test.com",
+            "password": "Other@1234",
         }, headers=admin_headers)
+
         response = client.get("/patients/", headers=patient_headers)
         assert response.status_code == 200
         patients = response.json()
         assert len(patients) == 1
-        assert patients[0]["email"] == "patient@test.com"
+        assert patients[0]["email"] == "patient@hospital-a.test"
 
     def test_get_nonexistent_patient_returns_404(self, client, admin_headers):
         response = client.get("/patients/999", headers=admin_headers)
@@ -80,6 +79,7 @@ class TestPatientCreate:
         response = client.post("/patients/", json={
             "name": "Minimal Patient",
             "email": "minimal@test.com",
+            "password": "Minimal@1234",
         }, headers=admin_headers)
         assert response.status_code == 201
         data = response.json()
@@ -107,13 +107,16 @@ class TestPatientUpdate:
         assert response.status_code == 200
         assert response.json()["phone"] == "555-9999"
 
-    def test_patient_can_update_own_record(self, client, admin_headers, patient_headers):
+    def test_patient_can_update_own_record(self, client, patient_headers):
         """Patients can update their own profile."""
-        create = client.post("/patients/", json={
-            "name": "Test Patient",
-            "email": "patient@test.com",
-        }, headers=admin_headers)
-        patient_id = create.json()["id"]
+        own = client.get("/patients/", headers=patient_headers)
+        assert own.status_code == 200
+
+        patients = own.json()
+        assert len(patients) == 1
+
+        patient_id = patients[0]["id"]
+
         response = client.put(
             f"/patients/{patient_id}",
             json={"phone": "555-1111"},
@@ -126,6 +129,7 @@ class TestPatientUpdate:
         other = client.post("/patients/", json={
             "name": "Other Patient",
             "email": "other@test.com",
+            "password": "Other@1234",
         }, headers=admin_headers)
         other_id = other.json()["id"]
         response = client.put(
@@ -147,6 +151,7 @@ class TestPatientDelete:
         create = client.post("/patients/", json={
             "name": "Test Patient",
             "email": "patient@test.com",
+            "password": "Patient@1234",
         }, headers=admin_headers)
         patient_id = create.json()["id"]
         response = client.delete(f"/patients/{patient_id}", headers=patient_headers)

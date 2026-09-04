@@ -51,3 +51,21 @@ def test_protected_endpoint_rejects_malformed_header(client):
         headers={"Authorization": "just-a-token"},
     )
     assert response.status_code == 401
+
+
+def test_unhandled_exception_returns_safe_500_response():
+    """Unexpected exceptions return a generic 500 without leaking internals."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    @app.get("/test-unhandled-error")
+    def test_unhandled_error():
+        raise RuntimeError("SECRET DATABASE ERROR DETAILS")
+
+    test_client = TestClient(app, raise_server_exceptions=False)
+
+    response = test_client.get("/test-unhandled-error")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+    assert "SECRET DATABASE ERROR DETAILS" not in response.text

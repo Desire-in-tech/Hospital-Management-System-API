@@ -7,6 +7,7 @@ import pytest
 DOCTOR_PAYLOAD = {
     "name": "Dr. Jane Smith",
     "email": "dr.jane@test.com",
+    "password": "Doctor@1234",
     "phone": "555-0100",
     "specialization": "Cardiologist",
     "department_id": None,

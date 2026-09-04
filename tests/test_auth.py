@@ -1,147 +1,321 @@
 """
-Authentication tests — register, login, token validation, role assignment.
+Authentication tests for the multi-tenant authentication system.
 """
 
-import pytest
-
-
 class TestRegister:
-    def test_register_as_patient(self, client):
-        response = client.post("/auth/register", json={
-            "name": "Alice Patient",
-            "email": "alice@test.com",
-            "password": "Alice@1234",
-            "role": "patient",
-        })
+
+    def test_register_hospital_admin(self, client):
+        response = client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Hospital Admin",
+                "email": "admin@example.com",
+                "password": "Admin@1234",
+            },
+        )
+
         assert response.status_code == 201
+
         data = response.json()
-        assert data["email"] == "alice@test.com"
-        assert data["role"] == "patient"
+
+        assert data["name"] == "Hospital Admin"
+        assert data["email"] == "admin@example.com"
+        assert data["role"] == "admin"
+        assert data["hospital_id"] is not None
         assert "password" not in data
         assert "password_hash" not in data
 
-    def test_register_as_doctor(self, client):
-        response = client.post("/auth/register", json={
-            "name": "Dr. Bob",
-            "email": "bob@test.com",
-            "password": "Bob@1234",
-            "role": "doctor",
-        })
-        assert response.status_code == 201
-        assert response.json()["role"] == "doctor"
 
-    def test_register_as_admin(self, client):
-        response = client.post("/auth/register", json={
-            "name": "Super Admin",
-            "email": "superadmin@test.com",
-            "password": "Admin@1234",
-            "role": "admin",
-        })
-        assert response.status_code == 201
-        assert response.json()["role"] == "admin"
-
-    def test_register_default_role_is_patient(self, client):
-        response = client.post("/auth/register", json={
-            "name": "No Role User",
-            "email": "norole@test.com",
-            "password": "NoRole@1234",
-        })
-        assert response.status_code == 201
-        assert response.json()["role"] == "patient"
-
-    def test_register_duplicate_email_fails(self, client):
+    def test_register_duplicate_hospital_slug_fails(self, client):
         payload = {
-            "name": "Charlie",
-            "email": "charlie@test.com",
-            "password": "Charlie@1234",
-            "role": "patient",
+            "hospital_name": "City Hospital",
+            "hospital_slug": "city-hospital",
+            "name": "Admin One",
+            "email": "admin1@example.com",
+            "password": "Admin@1234",
         }
-        client.post("/auth/register", json=payload)
-        response = client.post("/auth/register", json=payload)
-        assert response.status_code == 400
-        assert "already registered" in response.json()["detail"]
 
-    def test_register_invalid_email_fails(self, client):
-        response = client.post("/auth/register", json={
-            "name": "Bad Email",
-            "email": "not-an-email",
-            "password": "Bad@1234",
-            "role": "patient",
-        })
-        assert response.status_code == 422
+        first = client.post("/auth/register", json=payload)
+        assert first.status_code == 201
+
+        second = client.post(
+            "/auth/register",
+            json={
+                **payload,
+                "email": "admin2@example.com",
+            },
+        )
+
+        assert second.status_code == 400
+        assert "slug" in second.json()["detail"].lower()
+
 
     def test_register_missing_fields_fails(self, client):
-        response = client.post("/auth/register", json={"name": "Missing Fields"})
+        response = client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+            },
+        )
+
+        assert response.status_code == 422
+
+
+    def test_register_invalid_email_fails(self, client):
+        response = client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Admin",
+                "email": "not-an-email",
+                "password": "Admin@1234",
+            },
+        )
+
+        assert response.status_code == 422
+
+
+    def test_register_short_password_fails(self, client):
+        response = client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Admin",
+                "email": "admin@example.com",
+                "password": "short",
+            },
+        )
+
         assert response.status_code == 422
 
 
 class TestLogin:
+
     def test_login_success_returns_token(self, client):
-        client.post("/auth/register", json={
-            "name": "Login User",
-            "email": "login@test.com",
-            "password": "Login@1234",
-            "role": "patient",
-        })
-        response = client.post("/auth/login", json={
-            "email": "login@test.com",
-            "password": "Login@1234",
-        })
+        client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Login Admin",
+                "email": "login@example.com",
+                "password": "Login@1234",
+            },
+        )
+
+        response = client.post(
+            "/auth/login",
+            json={
+                "hospital_slug": "city-hospital",
+                "email": "login@example.com",
+                "password": "Login@1234",
+            },
+        )
+
         assert response.status_code == 200
+
         data = response.json()
+
         assert "access_token" in data
         assert data["token_type"] == "bearer"
         assert len(data["access_token"]) > 20
 
+
     def test_login_wrong_password_fails(self, client):
-        client.post("/auth/register", json={
-            "name": "Wrong Pass",
-            "email": "wrongpass@test.com",
-            "password": "Right@1234",
-            "role": "patient",
-        })
-        response = client.post("/auth/login", json={
-            "email": "wrongpass@test.com",
-            "password": "Wrong@9999",
-        })
+        client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Wrong Password",
+                "email": "wrongpass@example.com",
+                "password": "Right@1234",
+            },
+        )
+
+        response = client.post(
+            "/auth/login",
+            json={
+                "hospital_slug": "city-hospital",
+                "email": "wrongpass@example.com",
+                "password": "Wrong@9999",
+            },
+        )
+
         assert response.status_code == 401
 
+
     def test_login_unknown_email_fails(self, client):
-        response = client.post("/auth/login", json={
-            "email": "ghost@test.com",
-            "password": "Ghost@1234",
-        })
+        response = client.post(
+            "/auth/login",
+            json={
+                "hospital_slug": "city-hospital",
+                "email": "ghost@example.com",
+                "password": "Ghost@1234",
+            },
+        )
+
         assert response.status_code == 401
+
+
+    def test_login_wrong_hospital_fails(self, client):
+        client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Hospital Admin",
+                "email": "admin@example.com",
+                "password": "Admin@1234",
+            },
+        )
+
+        response = client.post(
+            "/auth/login",
+            json={
+                "hospital_slug": "wrong-hospital",
+                "email": "admin@example.com",
+                "password": "Admin@1234",
+            },
+        )
+
+        assert response.status_code == 401
+
 
     def test_oauth2_token_endpoint_works(self, client):
         """Swagger UI-compatible form-based token endpoint."""
-        client.post("/auth/register", json={
-            "name": "Form Login",
-            "email": "form@test.com",
-            "password": "Form@1234",
-            "role": "patient",
-        })
-        response = client.post("/auth/token", data={
-            "username": "form@test.com",
-            "password": "Form@1234",
-        })
+
+        client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Form Login",
+                "email": "form@example.com",
+                "password": "Form@1234",
+            },
+        )
+
+        response = client.post(
+            "/auth/token",
+            data={
+                "username": "city-hospital|form@example.com",
+                "password": "Form@1234",
+            },
+        )
+
         assert response.status_code == 200
         assert "access_token" in response.json()
+        assert response.json()["token_type"] == "bearer"
+
 
     def test_token_grants_access_to_protected_route(self, client):
-        client.post("/auth/register", json={
-            "name": "Token User",
-            "email": "tokenuser@test.com",
-            "password": "Token@1234",
-            "role": "admin",
-        })
-        login = client.post("/auth/login", json={
-            "email": "tokenuser@test.com",
-            "password": "Token@1234",
-        })
+        client.post(
+            "/auth/register",
+            json={
+                "hospital_name": "City Hospital",
+                "hospital_slug": "city-hospital",
+                "name": "Protected Admin",
+                "email": "protected@example.com",
+                "password": "Protected@1234",
+            },
+        )
+
+        login = client.post(
+            "/auth/login",
+            json={
+                "hospital_slug": "city-hospital",
+                "email": "protected@example.com",
+                "password": "Protected@1234",
+            },
+        )
+
+        assert login.status_code == 200
+
         token = login.json()["access_token"]
+
         response = client.get(
             "/departments/",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
         )
+
         assert response.status_code == 200
+
+
+    def test_invalid_token_is_rejected(self, client):
+        response = client.get(
+            "/departments/",
+            headers={
+                "Authorization": "Bearer definitely-not-a-valid-token",
+            },
+        )
+
+        assert response.status_code == 401
+
+
+class TestJWTSecurity:
+
+    def test_access_token_contains_expected_issuer_and_audience(self):
+        from app.core.security import (
+            JWT_AUDIENCE,
+            JWT_ISSUER,
+            create_access_token,
+            decode_token,
+        )
+
+        token = create_access_token({"sub": "1", "hospital_id": 1})
+        payload = decode_token(token)
+
+        assert payload is not None
+        assert payload["iss"] == JWT_ISSUER
+        assert payload["aud"] == JWT_AUDIENCE
+
+    def test_token_with_wrong_issuer_is_rejected(self):
+        from app.core.config import settings
+        from app.core.security import JWT_AUDIENCE, decode_token
+        import jwt
+
+        token = jwt.encode(
+            {
+                "sub": "1",
+                "hospital_id": 1,
+                "iss": "wrong-issuer",
+                "aud": JWT_AUDIENCE,
+            },
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM,
+        )
+
+        assert decode_token(token) is None
+
+    def test_token_with_wrong_audience_is_rejected(self):
+        from app.core.config import settings
+        from app.core.security import JWT_ISSUER, decode_token
+        import jwt
+
+        token = jwt.encode(
+            {
+                "sub": "1",
+                "hospital_id": 1,
+                "iss": JWT_ISSUER,
+                "aud": "wrong-audience",
+            },
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM,
+        )
+
+        assert decode_token(token) is None
+
+    def test_security_headers_are_present(self, client):
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Referrer-Policy"] == "no-referrer"

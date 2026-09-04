@@ -9,6 +9,7 @@ from app.models.patient import Gender
 class PatientCreate(BaseModel):
     name: str
     email: EmailStr
+    password: str
     dob: Optional[date] = None
     gender: Optional[Gender] = None
     address: Optional[str] = None

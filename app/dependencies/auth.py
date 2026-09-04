@@ -6,6 +6,7 @@ from app.core.security import decode_token
 from app.db.database import get_db
 from app.models.user import User, UserRole
 
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
@@ -18,54 +19,85 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     payload = decode_token(token)
+
     if payload is None:
         raise credentials_exception
 
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    user_id = payload.get("sub")
+    hospital_id = payload.get("hospital_id")
+
+    if user_id is None or hospital_id is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    try:
+        user_id = int(user_id)
+        hospital_id = int(hospital_id)
+    except (TypeError, ValueError):
+        raise credentials_exception
+
+    user = (
+        db.query(User)
+        .filter(
+            User.id == user_id,
+            User.hospital_id == hospital_id,
+        )
+        .first()
+    )
+
     if user is None:
         raise credentials_exception
+
     return user
 
 
 def require_role(*roles: UserRole):
-    def checker(current_user: User = Depends(get_current_user)) -> User:
+    def checker(
+        current_user: User = Depends(get_current_user),
+    ) -> User:
         if current_user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions",
             )
+
         return current_user
 
     return checker
 
 
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
+def require_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
+
     return current_user
 
 
-def require_doctor(current_user: User = Depends(get_current_user)) -> User:
+def require_doctor(
+    current_user: User = Depends(get_current_user),
+) -> User:
     if current_user.role not in (UserRole.admin, UserRole.doctor):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Doctor access required",
         )
+
     return current_user
 
 
-def require_patient(current_user: User = Depends(get_current_user)) -> User:
+def require_patient(
+    current_user: User = Depends(get_current_user),
+) -> User:
     if current_user.role not in (UserRole.admin, UserRole.patient):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Patient access required",
         )
+
     return current_user

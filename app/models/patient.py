@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Date, Enum, Integer, String
+from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -16,12 +16,40 @@ class Patient(Base):
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
+
+    hospital_id = Column(
+        Integer,
+        ForeignKey("hospitals.id"),
+        nullable=False,
+        index=True,
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
     dob = Column(Date, nullable=True)
     gender = Column(Enum(Gender), nullable=True)
     address = Column(String(500), nullable=True)
     phone = Column(String(50), nullable=True)
 
-    appointments = relationship("Appointment", back_populates="patient")
-    medical_records = relationship("MedicalRecord", back_populates="patient")
+    hospital = relationship("Hospital", back_populates="patients")
+
+    user = relationship(
+        "User",
+        back_populates="patient_profile",
+    )
+
+    appointments = relationship(
+        "Appointment",
+        back_populates="patient",
+    )
+
+    medical_records = relationship(
+        "MedicalRecord",
+        back_populates="patient",
+    )
