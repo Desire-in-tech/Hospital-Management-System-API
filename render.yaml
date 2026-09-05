@@ -2,6 +2,7 @@ services:
   - type: web
     name: hospital-management-system-api
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
