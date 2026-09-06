@@ -1,8 +1,8 @@
 # CareFlow — Hospital Management System
 
-A full-stack hospital management platform designed to help healthcare organizations manage patients, doctors, departments, appointments, medical records, and prescriptions through a secure role-based workspace.
+A full-stack hospital management platform designed to help healthcare organizations manage patients, doctors, departments, appointments, medical records, and prescriptions through a secure role-bas[...] 
 
-CareFlow started as a FastAPI hospital-management API and was extended into a complete SaaS-style application with a Next.js frontend, PostgreSQL persistence through Supabase, JWT authentication, role-based access control, and cloud deployment.
+CareFlow started as a FastAPI hospital-management API and was extended into a complete SaaS-style application with a Next.js frontend, PostgreSQL persistence through Supabase, JWT authentication, r[...]
 
 ## Live Application
 
@@ -204,7 +204,7 @@ Prescriptions can also be filtered by medical record:
     Admin / Doctor / Patient
              |
              v
-    +----------------------+
+    +----------------------+ 
     |   Next.js Frontend   |
     |        Vercel        |
     +----------+-----------+
@@ -363,7 +363,7 @@ Sensitive backend configuration and database credentials remain server-side. The
 
     GET    /departments/
     GET    /departments/{department_id}
-    POST   /departments/
+    POST    /departments/
     PUT    /departments/{department_id}
     DELETE /departments/{department_id}
 
@@ -906,8 +906,8 @@ CareFlow demonstrates practical experience with:
 
 ## Author
 
-**Desire-in-Tech**
+**Desire E**
 
-Self-taught software engineer focused on backend engineering, full-stack development, machine learning, and practical production-oriented applications.
+Software Engineer.
 
 GitHub: https://github.com/Desire-in-Tech
