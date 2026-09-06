@@ -1,327 +1,913 @@
-# Hospital Management System API
+# CareFlow — Hospital Management System
 
-## 1. Project Title
+A full-stack hospital management platform designed to help healthcare organizations manage patients, doctors, departments, appointments, medical records, and prescriptions through a secure role-based workspace.
 
-**Hospital Management System API**  
-A backend-only REST API for managing core hospital operations, including authentication, patient workflows, appointments, medical records, and prescriptions.
+CareFlow started as a FastAPI hospital-management API and was extended into a complete SaaS-style application with a Next.js frontend, PostgreSQL persistence through Supabase, JWT authentication, role-based access control, and cloud deployment.
 
----
+## Live Application
 
-## 2. Overview
+**Frontend:**  
+https://careflowfrontend-nvcv2hx1b-desire9.vercel.app/
 
-The **Hospital Management System API** is a production-style backend service built to support day-to-day hospital operations through a secure and structured REST API.
+**Backend API:**  
+https://hospital-management-system-api-eik1.onrender.com
 
-It is designed for key hospital roles such as:
-- **Administrators** managing departments, doctors, and overall system access
-- **Doctors** reviewing patient data, managing appointments, and creating medical records
-- **Patients** accessing their own information and booking appointments
-
-This project is **backend-only** and exposes API endpoints for authentication, operational workflows, and clinical record management. It is well-suited for portfolio use as a SaaS-style backend focused on clean architecture, role-based authorization, and realistic healthcare domain modeling.
+The frontend is deployed on Vercel, the FastAPI backend is deployed on Render, and the application database is hosted on Supabase PostgreSQL.
 
 ---
 
-## 3. Features
+## Overview
 
-- **JWT Authentication** for secure login and protected API access
-- **Role-Based Access Control** for **Admin**, **Doctor**, and **Patient** users
-- **Patient Management** with role-aware access to profile data
-- **Doctor Management** with department assignment support
-- **Appointment System** for scheduling and status updates
-- **Medical Records** for storing diagnosis and consultation notes
-- **Prescriptions** linked to medical records
-- **Seed Data Generation** using Faker for realistic development and demo data
-- **Docker Support** for containerized local development and deployment
+CareFlow provides a centralized digital workspace for hospital staff and patients.
 
----
+The application supports three primary roles:
 
-## 4. Tech Stack
+- **Admin** — manages hospital operations and resources.
+- **Doctor** — manages appointments, patients, medical records, and prescriptions within their authorized scope.
+- **Patient** — views their healthcare information and books appointments.
 
-- **FastAPI** - high-performance Python web framework for building REST APIs
-- **PostgreSQL** - primary relational database
-- **SQLAlchemy** - ORM for database modeling and persistence
-- **Alembic** - database schema migrations
-- **JWT Authentication** - token-based authentication and authorization
-- **Pydantic / Pydantic Settings** - request validation and configuration management
-- **Docker & Docker Compose** - containerized development environment
-- **Faker** - realistic seed data generation
-- **PyJWT** - JWT token encoding and decoding
-- **bcrypt** - password hashing
+The application uses one shared dashboard architecture that adapts navigation and available actions according to the authenticated user's role.
 
 ---
 
-## 5. System Architecture
+## Key Features
 
-The application follows a clean layered backend structure:
+### Authentication & Authorization
 
-- **FastAPI Layer**  
-  Handles HTTP requests, routing, request validation, response serialization, and OpenAPI documentation.
+- Hospital registration
+- Hospital-specific login using a hospital slug
+- JWT-based authentication
+- Role-based access control
+- Admin, Doctor, and Patient roles
+- Protected API endpoints
+- Hospital-scoped data access
+- Token expiration handling
+- Automatic redirect for unauthenticated dashboard access
 
-- **Service Layer**  
-  Contains the core business logic for authentication, patients, doctors, departments, appointments, records, and prescriptions.
+### Hospital Administration
 
-- **Database Layer**  
-  Uses PostgreSQL as the primary persistent data store for operational and clinical data.
+Administrators can manage:
 
-- **ORM Layer (SQLAlchemy)**  
-  Maps Python models to relational database tables and manages relationships between domain entities.
+- Doctors
+- Patients
+- Departments
+- Appointments
+- Medical records
+- Prescriptions
 
-- **Migration Layer (Alembic)**  
-  Tracks and applies schema changes consistently across development and deployment environments.
+### Doctor Workflow
 
-This structure keeps routing, business logic, and persistence concerns separated, making the project easier to maintain and extend.
+Doctors can:
 
----
+- View their appointments
+- Confirm appointments
+- Complete appointments
+- View patients within their hospital
+- Create medical records
+- Create prescriptions associated with medical records
+- Access authorized records and prescriptions
 
-## 6. Database Schema
+### Patient Workflow
 
-The API is built around the following core entities:
+Patients can:
 
-- **Users**  
-  Stores authentication and authorization data such as name, email, password hash, and role (`admin`, `doctor`, `patient`).
+- View their own patient information
+- Update their own patient profile
+- View their appointments
+- Book appointments
+- View their medical records
+- View prescriptions associated with their records
 
-- **Patients**  
-  Stores patient profile information including demographic and contact details.
-
-- **Doctors**  
-  Stores doctor profile data including specialization, email, phone, and department assignment.
-
-- **Departments**  
-  Represents hospital departments such as Cardiology, Neurology, and Pediatrics.
-
-- **Appointments**  
-  Connects patients and doctors for scheduled consultations and tracks appointment status.
-
-- **Medical Records**  
-  Stores diagnosis and consultation notes for a patient, created by a doctor.
-
-- **Prescriptions**  
-  Stores medication details linked to a medical record.
-
-### Relationships
-
-- One **Department** can have many **Doctors**
-- One **Patient** can have many **Appointments**
-- One **Doctor** can have many **Appointments**
-- One **Patient** can have many **Medical Records**
-- One **Doctor** can create many **Medical Records**
-- One **Medical Record** can have many **Prescriptions**
-
-### Important Modeling Note
-
-In this codebase, **authentication users** and **domain profiles** are stored separately:
-- `users` handles login credentials and role information
-- `patients` and `doctors` store business/domain data
-
-Doctor and patient access is associated in the application layer by matching the authenticated user's email with the corresponding doctor or patient profile.
+Patients cannot modify appointment status or delete appointments.
 
 ---
 
-## 7. Setup Instructions
+## Appointment Management
 
-### Clone repo
+Appointments support a controlled lifecycle:
 
-```bash
-git clone <your-repository-url>
-cd Hospital-Management-System-API
-```
+    pending
+       |
+       +----> confirmed
+       |          |
+       |          +----> completed
+       |          |
+       |          +----> cancelled
+       |
+       +----> cancelled
 
-### Create virtual environment
+The backend validates:
 
-```bash
-python -m venv .venv
-source .venv/Scripts/activate
-```
+- Future appointment dates
+- Appointment ownership
+- Doctor ownership
+- Hospital scope
+- Role permissions
+- Valid status transitions
+- Terminal states for completed/cancelled appointments
+- Appointment modification permissions
 
-> On macOS/Linux, use `source .venv/bin/activate` instead.
+Administrators can create appointments on behalf of patients and reschedule existing appointments.
 
-### Install dependencies
+### Appointment Rules
 
-```bash
-pip install -r requirements.txt
-```
+| Action | Admin | Doctor | Patient |
+|---|---:|---:|---:|
+| View authorized appointments | Yes | Yes | Yes |
+| Create appointment | Yes | No | Yes |
+| Update appointment | Yes | Own appointments | No |
+| Confirm appointment | Yes | Own appointments | No |
+| Complete appointment | Yes | Own appointments | No |
+| Reschedule | Yes | Yes, where authorized | No |
+| Delete appointment | Yes | No | No |
 
-### Setup .env file
+Completed appointments cannot be modified.
 
-```bash
-cp .env.example .env
-```
+---
 
-Update `.env` with your local configuration:
+## Medical Records
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hospital_db
-SECRET_KEY=change-this-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
+Medical records contain:
 
-### Run migrations (Alembic)
+- Patient
+- Doctor
+- Diagnosis
+- Clinical notes
+- Creation timestamp
+- Associated prescriptions
 
-```bash
-alembic upgrade head
-```
+Doctors can create records for patients they are authorized to treat.
 
-### Seed database
+Administrators can create records on behalf of a selected doctor.
 
-```bash
-python -m scripts.seed
-```
+Medical records do not currently expose an update endpoint; the frontend therefore provides record creation and detail views rather than an unsupported edit workflow.
 
-### Start server
+---
 
-```bash
-uvicorn app.main:app --reload --port 8000
-```
+## Prescriptions
+
+Prescriptions are associated with medical records and contain:
+
+- Medicine name
+- Dosage
+- Duration
+
+Prescription access is restricted according to the authenticated user's role and hospital.
+
+Doctors and administrators can create prescriptions.
+
+Only administrators can delete prescriptions.
+
+Prescriptions can also be filtered by medical record:
+
+    GET /prescriptions/?record_id={record_id}
+
+---
+
+## Technology Stack
+
+### Frontend
+
+- Next.js 16
+- React
+- TypeScript
+- Tailwind CSS
+- Next.js App Router
+- ESLint
+
+### Backend
+
+- Python
+- FastAPI
+- Pydantic
+- SQLAlchemy
+- JWT authentication
+- OAuth2-compatible token endpoint for Swagger
+- Role-based authorization
+
+### Database
+
+- PostgreSQL
+- Supabase
+
+### Deployment
+
+- Vercel — frontend
+- Render — backend API
+- Supabase — PostgreSQL database
+
+---
+
+## Architecture
+
+    User
+    Admin / Doctor / Patient
+             |
+             v
+    +----------------------+
+    |   Next.js Frontend   |
+    |        Vercel        |
+    +----------+-----------+
+               |
+          HTTPS / JSON
+               |
+               v
+    +----------------------+
+    |     FastAPI API      |
+    |        Render        |
+    +----------------------+
+    | Authentication       |
+    | RBAC                 |
+    | Business Rules       |
+    | API Routes           |
+    | Service Layer        |
+    +----------+-----------+
+               |
+          SQLAlchemy
+               |
+               v
+    +----------------------+
+    | PostgreSQL Database  |
+    |       Supabase       |
+    +----------------------+
+
+The frontend communicates with the backend through authenticated HTTP requests.
+
+Sensitive backend configuration and database credentials remain server-side. The frontend only exposes the public API base URL.
+
+---
+
+## Project Structure
+
+    Hospital-Management-System-API/
+    |
+    +-- app/
+    |   +-- api/
+    |   |   +-- appointments.py
+    |   |   +-- auth.py
+    |   |   +-- departments.py
+    |   |   +-- doctors.py
+    |   |   +-- patients.py
+    |   |   +-- prescriptions.py
+    |   |   +-- records.py
+    |   |
+    |   +-- core/
+    |   |   +-- config.py
+    |   |
+    |   +-- db/
+    |   |   +-- database.py
+    |   |
+    |   +-- dependencies/
+    |   |   +-- auth.py
+    |   |
+    |   +-- models/
+    |   +-- schemas/
+    |   +-- services/
+    |   |
+    |   +-- main.py
+    |
+    +-- frontend/
+    |   +-- app/
+    |   |   +-- dashboard/
+    |   |   |   +-- appointments/
+    |   |   |   +-- departments/
+    |   |   |   +-- doctors/
+    |   |   |   +-- medical-records/
+    |   |   |   +-- patients/
+    |   |   |   +-- prescriptions/
+    |   |   |
+    |   |   +-- login/
+    |   |   +-- register/
+    |   |
+    |   +-- components/
+    |   |   +-- dashboard/
+    |   |
+    |   +-- lib/
+    |       +-- api.ts
+    |       +-- auth.ts
+    |       +-- types.ts
+    |
+    +-- tests/
+    +-- Dockerfile
+    +-- requirements.txt
+    +-- .env.example
+    +-- alembic.ini
+    +-- README.md
+
+---
+
+## Frontend Routes
+
+### Public Routes
+
+| Route | Purpose |
+|---|---|
+| `/` | CareFlow landing page |
+| `/login` | User authentication |
+| `/register` | Hospital registration |
+
+### Dashboard Routes
+
+| Route | Purpose |
+|---|---|
+| `/dashboard` | Role-aware overview |
+| `/dashboard/appointments` | Appointment management |
+| `/dashboard/appointments/new` | Create/book appointment |
+| `/dashboard/appointments/[id]/edit` | Edit appointment |
+| `/dashboard/patients` | Patient management |
+| `/dashboard/patients/new` | Create patient |
+| `/dashboard/patients/[id]/edit` | Edit patient |
+| `/dashboard/doctors` | Doctor management |
+| `/dashboard/doctors/new` | Create doctor |
+| `/dashboard/doctors/[id]/edit` | Edit doctor |
+| `/dashboard/departments` | Department management |
+| `/dashboard/departments/new` | Create department |
+| `/dashboard/departments/[id]/edit` | Edit department |
+| `/dashboard/medical-records` | Medical records |
+| `/dashboard/medical-records/new` | Create medical record |
+| `/dashboard/medical-records/[id]` | Medical record details |
+| `/dashboard/prescriptions` | Prescription management |
+| `/dashboard/prescriptions/new` | Create prescription |
+
+---
+
+## API
+
+### Authentication
+
+    POST /auth/register
+    POST /auth/login
+    POST /auth/token
+
+`/auth/login` is the JSON login endpoint used by the frontend.
+
+`/auth/token` provides an OAuth2-compatible token endpoint for tools such as FastAPI Swagger UI.
+
+### Doctors
+
+    GET    /doctors/
+    GET    /doctors/{doctor_id}
+    POST   /doctors/
+    PUT    /doctors/{doctor_id}
+    DELETE /doctors/{doctor_id}
+
+### Patients
+
+    GET    /patients/
+    GET    /patients/{patient_id}
+    POST   /patients/
+    PUT    /patients/{patient_id}
+    DELETE /patients/{patient_id}
+
+### Departments
+
+    GET    /departments/
+    GET    /departments/{department_id}
+    POST   /departments/
+    PUT    /departments/{department_id}
+    DELETE /departments/{department_id}
+
+### Appointments
+
+    GET    /appointments/
+    GET    /appointments/{appointment_id}
+    POST   /appointments/
+    POST   /appointments/admin
+    PUT    /appointments/{appointment_id}
+    DELETE /appointments/{appointment_id}
+
+### Medical Records
+
+    GET    /records/
+    GET    /records/{record_id}
+    POST   /records/
+    POST   /records/admin
+    DELETE /records/{record_id}
+
+### Prescriptions
+
+    GET    /prescriptions/
+    GET    /prescriptions/{prescription_id}
+    POST   /prescriptions/
+    DELETE /prescriptions/{prescription_id}
+
+Optional medical-record filtering:
+
+    GET /prescriptions/?record_id={record_id}
+
+---
+
+## Role-Based Access Control
+
+CareFlow uses backend-enforced role-based authorization.
+
+### Admin
+
+Administrators can:
+
+- Manage doctors
+- Manage patients
+- Manage departments
+- Create appointments for patients
+- Update appointments
+- Delete appointments
+- Create medical records for selected doctors
+- Delete medical records
+- Create prescriptions
+- Delete prescriptions
+- View hospital-wide authorized data
+
+### Doctor
+
+Doctors can:
+
+- View their appointments
+- Update their own appointments
+- Confirm appointments
+- Complete appointments
+- View hospital patients
+- Create medical records
+- Create prescriptions for records assigned to them
+- View authorized medical records and prescriptions
+
+Doctors cannot:
+
+- Delete appointments
+- Delete prescriptions
+- Manage departments
+- Manage doctors
+- Perform administrator-only operations
+
+### Patient
+
+Patients can:
+
+- View their own patient information
+- Update their own patient information
+- View their appointments
+- Book appointments
+- View their medical records
+- View their prescriptions
+
+Patients cannot:
+
+- Update appointment status
+- Delete appointments
+- Create medical records
+- Create prescriptions
+- Access another patient's data
+
+Authorization is enforced by the backend rather than relying only on frontend navigation restrictions.
+
+---
+
+## Authentication Flow
+
+CareFlow uses JWT access tokens.
+
+    User
+      |
+      | hospital_slug + email + password
+      v
+    POST /auth/login
+      |
+      | validate credentials
+      v
+    JWT access token
+      |
+      v
+    Next.js frontend
+      |
+      | Authorization: Bearer <token>
+      v
+    Protected API endpoints
+
+The JWT contains:
+
+- User ID
+- Hospital ID
+- User role
+- Token expiration
+
+The frontend uses the token to maintain the authenticated session and determine role-aware UI behavior.
+
+Actual authorization remains enforced by the backend.
+
+---
+
+## Multi-Tenant Hospital Model
+
+Authentication is hospital-aware.
+
+Users authenticate using:
+
+    hospital_slug
+    email
+    password
+
+The resulting JWT includes the user's hospital ID.
+
+Backend resources are scoped to the authenticated hospital where appropriate, providing the foundation for a multi-tenant SaaS architecture.
+
+---
+
+## Environment Variables
+
+### Backend
+
+Backend environment variables are kept server-side.
+
+Example:
+
+    ENVIRONMENT=production
+    DATABASE_URL=<postgresql-connection-string>
+    SECRET_KEY=<strong-secret>
+    ALGORITHM=HS256
+    ACCESS_TOKEN_EXPIRE_MINUTES=30
+    CORS_ORIGINS=<allowed-frontend-origins>
+
+Never expose or commit real values for:
+
+- `DATABASE_URL`
+- `SECRET_KEY`
+
+### Frontend
+
+The frontend requires:
+
+    NEXT_PUBLIC_API_URL=https://hospital-management-system-api-eik1.onrender.com
+
+Only the API base URL is exposed to the browser.
+
+---
+
+## Running Locally
+
+### Backend
+
+From the repository root:
+
+    pip install -r requirements.txt
+
+Configure the backend environment variables in `.env`.
+
+Start FastAPI:
+
+    uvicorn app.main:app --reload
 
 The API will be available at:
-- `http://localhost:8000`
-- `http://localhost:8000/docs`
+
+    http://localhost:8000
+
+FastAPI documentation:
+
+    http://localhost:8000/docs
+
+### Frontend
+
+Move into the frontend:
+
+    cd frontend
+
+Install dependencies:
+
+    npm install
+
+Create `.env.local`:
+
+    NEXT_PUBLIC_API_URL=http://localhost:8000
+
+Start the development server:
+
+    npm run dev
+
+The frontend will be available at:
+
+    http://localhost:3000
 
 ---
 
-## 8. Environment Variables
+## Production Deployment
 
-The project uses the following environment variables:
+### Frontend — Vercel
 
-- `DATABASE_URL` - database connection string for PostgreSQL
-- `SECRET_KEY` - secret used to sign JWT access tokens
-- `ALGORITHM` - JWT signing algorithm, e.g. `HS256`
-- `ACCESS_TOKEN_EXPIRE_MINUTES` - token expiration time in minutes
+The Next.js application is deployed from:
 
-### Example values
+    frontend/
 
-For local development:
+Vercel configuration:
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hospital_db
-SECRET_KEY=change-this-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
+    Framework: Next.js
+    Root Directory: frontend
 
-For Docker Compose networking, the database host is typically `db`:
+Production API configuration:
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@db:5432/hospital_db
-SECRET_KEY=change-this-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
+    NEXT_PUBLIC_API_URL=https://hospital-management-system-api-eik1.onrender.com
 
----
+The project is connected to GitHub so future pushes can trigger deployments.
 
-## 9. Running with Docker
+### Backend — Render
 
-This project includes a `Dockerfile` and `docker-compose.yml` for containerized development.
+The FastAPI backend is deployed on Render:
 
-### Build containers
+    https://hospital-management-system-api-eik1.onrender.com
 
-```bash
-docker compose build
-```
+Backend secrets and database configuration remain in the Render environment.
 
-### Start services
+### Database — Supabase
 
-```bash
-docker compose up
-```
+The application uses PostgreSQL hosted through Supabase.
 
-The API will be accessible at:
-- `http://localhost:8000`
-- `http://localhost:8000/docs`
-
-### Notes
-
-- The API container runs Alembic migrations automatically on startup
-- The PostgreSQL database is started as a separate service in Docker Compose
-- Ensure your `.env` file uses the Docker database host (`db`) when running in containers
+The database connection is provided to the backend through the server-side `DATABASE_URL` environment variable.
 
 ---
 
-## 10. Seeding the Database
+## CORS
 
-The project includes a seed script powered by **Faker** to generate realistic sample data for development, demos, and portfolio presentation.
+The backend is configured to allow trusted frontend origins.
 
-### Purpose of the seed script
+Development origins include:
 
-It populates the database with linked records so the API can be explored immediately through Swagger UI or API clients without manual setup.
+    http://localhost:3000
+    http://127.0.0.1:3000
 
-### Run the seed script locally
+Production frontend:
 
-```bash
-python -m scripts.seed
-```
+    https://careflowfrontend-nvcv2hx1b-desire9.vercel.app
 
-### Run the seed script with Docker
-
-```bash
-docker compose exec api python -m scripts.seed
-```
-
-### Seeded data includes
-
-- 1 admin user
-- 10 departments
-- 30 doctors
-- 500 patients
-- 1000 appointments
-- 500 medical records
-- 1000 prescriptions
-
-### Default seeded credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@hospital.com` | `Admin@1234` |
-| Doctor | any seeded doctor email | `Doctor@1234` |
-| Patient | any seeded patient email | `Patient@1234` |
+CORS is configured on the backend rather than exposing backend configuration to the frontend.
 
 ---
 
-## 11. API Endpoints Overview
+## Testing & Quality Assurance
 
-The API is organized into the following resource groups:
+### Frontend Build
 
-- **Auth**  
-  Registration, login, and token issuance for authenticated access
+The final frontend passed:
 
-- **Patients**  
-  Patient profile management and role-aware access to patient data
+    npm run lint
+    npm run build
 
-- **Doctors**  
-  Doctor profile management and department assignment
+The production Next.js build completed successfully with all application routes generated.
 
-- **Departments**  
-  Department creation, retrieval, update, and deletion
+### Authentication QA
 
-- **Appointments**  
-  Appointment booking, listing, retrieval, status updates, and admin-managed scheduling
+The deployed API was validated for:
 
-- **Medical Records**  
-  Doctor/admin-created clinical records with role-based visibility
+- Hospital registration
+- Admin login
+- Doctor login
+- Patient login
+- JWT generation
+- Protected endpoint access
+- Role-based access control
 
-- **Prescriptions**  
-  Prescription creation and retrieval linked to medical records
+### Appointment QA
 
-Interactive API documentation is available via Swagger UI at:
+The deployed appointment system was tested through a complete lifecycle.
 
-```bash
-http://localhost:8000/docs
-```
+Validated:
+
+- Patient appointment creation
+- Patient update rejection
+- Doctor confirmation
+- Doctor completion
+- Completed appointment modification rejection
+- Patient deletion rejection
+- Doctor deletion rejection
+- Admin appointment creation
+- Admin confirmation
+- Appointment rescheduling
+- Past-date rejection
+- Valid status transitions
+- Terminal appointment protection
+- Admin deletion
+- Deleted-resource verification
+
+The production appointment QA completed successfully.
+
+### Prescription QA
+
+The deployed prescription workflow was tested for:
+
+- Admin prescription access
+- Doctor prescription access
+- Patient prescription access
+- Doctor prescription creation
+- Patient creation rejection
+- Authorized patient access
+- Authorized doctor access
+- Admin access
+- Patient deletion rejection
+- Doctor deletion rejection
+- Admin deletion
+- Deleted-resource verification
+
+The production prescription QA completed successfully.
+
+### Test Data Cleanup
+
+Temporary production QA data was removed after testing, including:
+
+- Temporary appointments
+- Temporary medical record
+- Temporary prescription
 
 ---
 
-## 12. Future Improvements
+## Security Considerations
 
-Potential next steps for expanding the platform include:
+### Backend Authorization
 
-- **Payment integration** for billing or paid consultation workflows
-- **Notifications system** for appointment and status updates
-- **Advanced analytics dashboard** for operational and clinical insights
-- **Email reminders** for appointments, prescriptions, and follow-up care
+Frontend navigation is not treated as a security boundary.
+
+The backend independently validates:
+
+- Authentication
+- User role
+- Hospital scope
+- Resource ownership
+- Appointment ownership
+- Doctor ownership
+- Medical-record access
+- Prescription access
+
+### Secret Management
+
+Database credentials and JWT signing secrets remain server-side.
+
+The frontend does not receive:
+
+    DATABASE_URL
+    SECRET_KEY
+
+### Token Expiration
+
+JWT access tokens have a defined expiration period.
+
+The frontend checks token validity before treating a session as authenticated.
+
+### Hospital Isolation
+
+Users authenticate against a hospital slug and receive a hospital ID in the JWT, establishing tenant-level isolation for hospital resources.
 
 ---
 
-## 13. Author Section
+## Design & UX
 
-Built as a portfolio-ready backend project to demonstrate API design, authentication, role-based access control, database modeling, containerized development, and production-style backend architecture with FastAPI.
+CareFlow uses a healthcare-focused visual language built around:
+
+- Forest green
+- Light green
+- White
+- Light blue
+- Restrained red for errors and destructive actions
+
+The design intentionally avoids the stereotypical oversized medical cross and generic AI-dashboard aesthetic.
+
+The interface emphasizes:
+
+- Clinical professionalism
+- Trust
+- Calm
+- Operational efficiency
+- Readability
+- Responsive layouts
+- Role-specific workflows
+
+---
+
+## Current Scope
+
+The current version focuses on the core hospital-management workflow:
+
+    Hospital
+       |
+       +-- Users
+       |     +-- Admin
+       |     +-- Doctors
+       |     +-- Patients
+       |
+       +-- Departments
+       |
+       +-- Appointments
+       |
+       +-- Medical Records
+       |       |
+       |       +-- Prescriptions
+       |
+       +-- Role-aware dashboards
+
+The system focuses on core hospital operations rather than attempting to implement every possible healthcare feature.
+
+---
+
+## Future Improvements
+
+Potential future development areas include:
+
+- Hospital staff/user management interface
+- More granular permissions
+- Appointment calendar views
+- Notifications and reminders
+- Email/SMS appointment notifications
+- Patient search and filtering
+- Advanced reporting and analytics
+- Audit logging
+- Pagination for large datasets
+- Improved observability and monitoring
+- Automated end-to-end browser testing
+- Automated CI/CD testing
+- Password reset and account recovery
+- Profile management
+- File/document attachments for medical records
+- Expanded multi-tenant administration
+- Production-grade secret rotation and key management
+
+These are future improvements rather than current functionality.
+
+---
+
+## Development Principles
+
+1. Backend authorization is authoritative.
+2. Hospital data should remain tenant-scoped.
+3. Secrets belong on the server, not the frontend.
+4. Existing backend functionality should be preserved where practical.
+5. Business rules belong in the backend rather than being enforced only by UI behavior.
+6. Frontend workflows should reflect actual backend contracts.
+7. Production behavior should be validated against the deployed API.
+
+---
+
+## What This Project Demonstrates
+
+CareFlow demonstrates practical experience with:
+
+- Full-stack application development
+- REST API development
+- FastAPI
+- Python
+- SQLAlchemy
+- PostgreSQL
+- Supabase
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- JWT authentication
+- Role-based access control
+- Multi-tenant SaaS architecture
+- API integration
+- Database-backed applications
+- Production deployment
+- Vercel
+- Render
+- CORS configuration
+- API testing
+- Production QA
+- Responsive UI development
+- Secure environment-variable management
+
+---
+
+## Project Status
+
+**Status: Deployed MVP / Active Portfolio Project**
+
+### Completed
+
+- [x] FastAPI backend
+- [x] PostgreSQL/Supabase persistence
+- [x] Hospital registration
+- [x] Authentication
+- [x] JWT authorization
+- [x] Admin role
+- [x] Doctor role
+- [x] Patient role
+- [x] Department management
+- [x] Doctor management
+- [x] Patient management
+- [x] Appointment management
+- [x] Appointment lifecycle rules
+- [x] Medical records
+- [x] Prescriptions
+- [x] Role-aware dashboard
+- [x] Next.js frontend
+- [x] Responsive UI
+- [x] Production build validation
+- [x] Production API QA
+- [x] Vercel deployment
+- [x] Render deployment
+- [x] Supabase database
+- [x] CORS configuration
+
+---
+
+## Author
+
+**Desire-in-Tech**
+
+Self-taught software engineer focused on backend engineering, full-stack development, machine learning, and practical production-oriented applications.
+
+GitHub: https://github.com/Desire-in-Tech
