@@ -14,6 +14,19 @@ https://hospital-management-system-api-eik1.onrender.com
 
 The frontend is deployed on Vercel, the FastAPI backend is deployed on Render, and the application database is hosted on Supabase PostgreSQL.
 
+### Frontend screenshots
+
+Preview the CareFlow hospital management platform frontend below. Select any screenshot to open the full-size image.
+
+<p align="center">
+  <a href="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957657/Screenshot_2026-10-25_224509_eqzhbx.png"><img src="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957657/Screenshot_2026-10-25_224509_eqzhbx.png" alt="CareFlow frontend screenshot 1" width="48%" /></a>
+  <a href="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957674/Screenshot_2026-10-25_224546_ii6sjv.png"><img src="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957674/Screenshot_2026-10-25_224546_ii6sjv.png" alt="CareFlow frontend screenshot 2" width="48%" /></a>
+</p>
+<p align="center">
+  <a href="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957690/Screenshot_2026-10-25_224603_aydh0e.png"><img src="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957690/Screenshot_2026-10-25_224603_aydh0e.png" alt="CareFlow frontend screenshot 3" width="48%" /></a>
+  <a href="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957711/Screenshot_2026-10-25_224622_plzmhr.png"><img src="https://res.cloudinary.com/f7ko7ayw/image/upload/v1792957711/Screenshot_2026-10-25_224622_plzmhr.png" alt="CareFlow frontend screenshot 4" width="48%" /></a>
+</p>
+
 ---
 
 ## Overview
